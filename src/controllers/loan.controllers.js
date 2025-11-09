@@ -4,7 +4,7 @@ import setReturnDate from "../utils/setReturnDate.js";
 const getLoansByUser = async (req, res) => {
     const borrowerId = Number(req.params.userId);
     const loans = await prisma.loan.findMany({
-        where: { borrower_id: borrowerId }
+        where: { borrowerId }
     });
     res.json(loans);
 }
@@ -51,7 +51,7 @@ const returnBook = async (req, res) => {
         const id = Number(req.params.id);
         const { isDamaged, isLate } = req.body
 
-        const loan = await prisma.loan.updateMany({
+        const loan = await prisma.loan.update({
             where: { id },
             data: {
                 isDone: true,
