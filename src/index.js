@@ -4,6 +4,11 @@ import bookRouter from './routes/book.routes.js';
 
 const app = express();
 
+// Middleware untuk parsing JSON body
+app.use(express.json());
+// Middleware untuk parsing URL-encoded bodies (seperti dari form)
+app.use(express.urlencoded({ extended: true }));
+
 app.use('/api/books', bookRouter);
 
 app.get('/', (req, res) => {
@@ -13,3 +18,4 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${ PORT }`);
 });
+
