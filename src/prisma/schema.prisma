@@ -30,7 +30,7 @@ model User {
   username     String        @db.VarChar(50)
   email        String        @db.VarChar(50)
   photo        String?       @db.VarChar(50)
-  password     String        @db.VarChar(50)
+  password     String        @db.VarChar(255)
   status       UserStatus
   isBlacklist  Boolean       @map("is_blacklist")
 
