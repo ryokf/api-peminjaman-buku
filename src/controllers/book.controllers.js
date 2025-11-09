@@ -1,7 +1,43 @@
 import { prisma } from "../prisma/client.js";
 
 const getBooks = async (req, res) => {
-    const books = await prisma.book.findMany();
+    let books;
+
+    const categoryId = Number(req.query.category_id);
+    const searchQuery = req.query.search;
+
+    if(categoryId){
+        books = await prisma.book.findMany({
+            where:{ categoryId }
+        });
+    } else if(searchQuery){
+        books = await prisma.book.findMany({
+            where:{
+                title:{
+                    contains: searchQuery,
+                    mode: "insensitive"
+                }
+            }
+        });
+    }else {
+        books = await prisma.book.findMany();
+    }
+    res.send(books);
+}
+
+const getDetailBook = async (req, res) => {
+    const id = Number(req.params.id);
+    const book = await prisma.book.findUnique({
+        where: { id },
+    });
+    res.send(book);
+} 
+
+const getBooksByWriter = async (req, res) => {
+    const writerId = Number(req.params.writerId);
+    const books = await prisma.book.findMany({
+        where: { writerId }
+    });
     res.send(books);
 }
 
@@ -149,4 +185,4 @@ const deleteBook = async (req, res) => {
     }
 }
 
-export { getBooks, createBooks, editBook, deleteBook };
+export { getBooks, createBooks, editBook, deleteBook, getBooksByWriter, getDetailBook };

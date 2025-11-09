@@ -2,6 +2,7 @@ import express from 'express';
 import { PORT } from './config/env.js';
 import bookRouter from './routes/book.routes.js';
 import authRouter from './routes/auth.routes.js';
+import loanRouter from './routes/loan.routes.js';
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use('/api/books', bookRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/loans', loanRouter);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Book Borrowing API');
