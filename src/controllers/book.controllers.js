@@ -6,8 +6,6 @@ const getBooks = async (req, res) => {
 }
 
 const createBooks = async (req, res) => {
-    console.log("Request body:", req.body);
-
     try {
         const {
             title,
@@ -58,4 +56,97 @@ const createBooks = async (req, res) => {
     }
 }
 
-export { getBooks, createBooks };
+const editBook = async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const {
+            title,
+            description,
+            language,
+            photo,
+            is_available,
+            writer_id,
+            category_id,
+            owner_id,
+        } = req.body;
+
+        const updatedBook = await prisma.book.update({
+            where: { id },
+            data: {
+                title,
+                description,
+                language,
+                photo,
+                isAvailable: is_available !== undefined ? Boolean(is_available) : undefined,
+                writerId: writer_id !== undefined ? Number(writer_id) : undefined,
+                categoryId: category_id !== undefined ? Number(category_id) : undefined,
+                ownerId: owner_id !== undefined ? Number(owner_id) : undefined,
+            },
+        });
+
+        return res.status(200).json(updatedBook);
+    } catch (err) {
+        console.error("Edit book error:", err);
+        return res.status(500).json({
+            message: "Failed to edit book",
+            error: err.message,
+        });
+    }
+}
+
+const deleteBook = async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        // Pertama, periksa apakah buku ada
+        const book = await prisma.book.findUnique({
+            where: { id },
+            include: {
+                loans: true,
+                reservations: true
+            }
+        });
+
+        if (!book) {
+            return res.status(404).json({
+                message: `Book with id ${id} not found`
+            });
+        }
+
+        // Gunakan transaksi untuk menghapus semua data terkait dan buku dalam satu operasi atomic
+        const deletedBook = await prisma.$transaction(async (tx) => {
+            // Hapus semua reservations terkait
+            if (book.reservations.length > 0) {
+                await tx.reservation.deleteMany({
+                    where: { bookId: id }
+                });
+            }
+
+            // Hapus semua loans terkait
+            if (book.loans.length > 0) {
+                await tx.loan.deleteMany({
+                    where: { bookId: id }
+                });
+            }
+
+            // Akhirnya hapus buku
+            return await tx.book.delete({
+                where: { id }
+            });
+        });
+
+        return res.status(200).json({
+            status: 200,
+            message: `Book with id ${id} and all related records successfully deleted`,
+            data: deletedBook
+        });
+    } catch (err) {
+        console.error("Delete book error:", err);
+        return res.status(500).json({
+            message: "Failed to delete book",
+            error: err.message
+        });
+    }
+}
+
+export { getBooks, createBooks, editBook, deleteBook };
