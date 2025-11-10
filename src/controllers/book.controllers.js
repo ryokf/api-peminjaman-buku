@@ -29,8 +29,28 @@ const getDetailBook = async (req, res) => {
     const id = Number(req.params.id);
     const book = await prisma.book.findUnique({
         where: { id },
+        include: {
+            writer: true,
+            category: true,
+            loans: true,
+        }
     });
-    res.send(book);
+
+    let onBorrowed = false
+    book.loans.forEach((loan) => {
+        if(!loan.isDone){
+            onBorrowed = true
+        }
+    });
+
+    res.status(200).json({
+        status: 200,
+        message: "",
+        data: {
+            onBorrowed,
+            ...book
+        }
+    });
 } 
 
 const getBooksByWriter = async (req, res) => {
