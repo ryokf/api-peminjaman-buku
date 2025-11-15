@@ -6,20 +6,20 @@ const getBooks = async (req, res) => {
     const categoryId = Number(req.query.category_id);
     const searchQuery = req.query.search;
 
-    if(categoryId){
+    if (categoryId) {
         books = await prisma.book.findMany({
-            where:{ categoryId }
+            where: { categoryId }
         });
-    } else if(searchQuery){
+    } else if (searchQuery) {
         books = await prisma.book.findMany({
-            where:{
-                title:{
+            where: {
+                title: {
                     contains: searchQuery,
                     mode: "insensitive"
                 }
             }
         });
-    }else {
+    } else {
         books = await prisma.book.findMany();
     }
     res.send(books);
@@ -32,13 +32,22 @@ const getDetailBook = async (req, res) => {
         include: {
             writer: true,
             category: true,
-            loans: true,
+            loans: {
+                select:{
+                    isDone: true
+                }
+            },
+            reservations: {
+                where: {
+                    status: "queue"
+                }
+            }
         }
     });
 
     let onBorrowed = false
     book.loans.forEach((loan) => {
-        if(!loan.isDone){
+        if (!loan.isDone) {
             onBorrowed = true
         }
     });
@@ -51,7 +60,7 @@ const getDetailBook = async (req, res) => {
             ...book
         }
     });
-} 
+}
 
 const getBooksByWriter = async (req, res) => {
     const writerId = Number(req.params.writerId);
@@ -165,7 +174,7 @@ const deleteBook = async (req, res) => {
 
         if (!book) {
             return res.status(404).json({
-                message: `Book with id ${id} not found`
+                message: `Book with id ${ id } not found`
             });
         }
 
@@ -193,7 +202,7 @@ const deleteBook = async (req, res) => {
 
         return res.status(200).json({
             status: 200,
-            message: `Book with id ${id} and all related records successfully deleted`,
+            message: `Book with id ${ id } and all related records successfully deleted`,
             data: deletedBook
         });
     } catch (err) {

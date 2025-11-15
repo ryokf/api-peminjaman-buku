@@ -1,3 +1,6 @@
+import { prisma } from "../prisma/client.js";
+import setReturnDate from "../utils/setReturnDate.js";
+
 const getReservationsByUser = async (req, res) => {
     try {
         const userId = Number(req.params.userId);
@@ -19,52 +22,41 @@ const getReservationsByUser = async (req, res) => {
 
 const createReservation = async (req, res) => {
     try {
-        const { book_id, borrower_id, queue, status } = req.body;
+        const { book_id, borrower_id } = req.body;
 
-        if (book_id === undefined || borrower_id === undefined) {
-            return res.status(400).json({
-                message: "book_id and borrower_id are required"
-            });
+        const book = await prisma.book.findUnique({
+            where: { id: book_id },
+            select: {
+                id: true,
+                reservations: {
+                    where: {
+                        status: "queue"
+                    }
+                }
+            },
+        });
+
+        const queue = book.reservations.length + 1;
+
+        const existingReservation = await prisma.reservation.findFirst({
+            where: {
+                bookId: Number(book_id),
+                borrowerId: Number(borrower_id),
+                status: "queue"
+            }
+        })
+
+        if (existingReservation) {
+            throw new Error("User already has an active reservation for this book");
         }
 
-        const allowedStatus = ["cancel", "done", "queue"];
-        const finalStatus = allowedStatus.includes(status) ? status : "queue";
-
-        const created = await prisma.$transaction(async (tx) => {
-            // Prevent duplicate active queue for same user & book
-            const existingActive = await tx.reservation.findFirst({
-                where: {
-                    book_id: Number(book_id),
-                    borrower_id: Number(borrower_id),
-                    status: "queue",
-                },
-                select: { id: true },
-            });
-            if (existingActive) {
-                throw new Error("User already has an active reservation (queue) for this book");
-            }
-
-            // Compute queue if not provided: next highest position for this book
-            let nextQueue;
-            if (queue !== undefined) {
-                nextQueue = Number(queue);
-            } else {
-                const last = await tx.reservation.findFirst({
-                    where: { book_id: Number(book_id), status: "queue" },
-                    orderBy: { queue: "desc" },
-                    select: { queue: true },
-                });
-                nextQueue = (last?.queue ?? 0) + 1;
-            }
-
-            return tx.reservation.create({
-                data: {
-                    book_id: Number(book_id),
-                    borrower_id: Number(borrower_id),
-                    queue: nextQueue,
-                    status: finalStatus,
-                },
-            });
+        const created = await prisma.reservation.create({
+            data: {
+                bookId: Number(book_id),
+                borrowerId: Number(borrower_id),
+                queue,
+                status: "queue"
+            },
         });
 
         return res.status(201).json({
@@ -83,7 +75,102 @@ const createReservation = async (req, res) => {
     }
 }
 
+const editReservation = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if(status !== "done" && status !== "cancel") {
+            return res.status(400).json({
+                message: "Invalid status value. Must be 'done' or 'cancel'."
+            });
+        }
+
+        const reservation = await prisma.reservation.update({
+            where: {
+                id: Number(id)
+            }, data: {
+                status,
+                queue: 0
+            }, include: {
+                book: true
+            }
+        })
+
+        await prisma.reservation.updateMany({
+            where: {
+                bookId: reservation.bookId,
+                NOT: { id: reservation.id }
+            }, data: {
+                queue: {
+                    decrement: 1
+                }
+            }
+        })
+
+        if (status === "done") {
+            try {
+                const loanData = {
+                    bookId: reservation.bookId,
+                    borrowerId: reservation.borrowerId,
+                    isDone: false,
+                    isLate: false,
+                    isDamaged: false,
+                    photo: ""
+                };
+
+                const { bookId,
+                    borrowerId,
+                    isDone = false,
+                    isLate = false,
+                    isDamaged = false,
+                    photo = ""
+                } = loanData;
+
+                // Required fields
+                if (bookId === undefined || borrowerId === undefined) {
+                    return res.status(400).json({
+                        message: "book_id and borrower_id are required"
+                    });
+                }
+
+                const borrowDate = new Date()
+                const loan = await prisma.loan.create({
+                    data: {
+                        bookId: Number(bookId),
+                        borrowerId: Number(borrowerId),
+                        returnDate: new Date(setReturnDate(borrowDate)),
+                        isDone: Boolean(isDone),
+                        isLate: Boolean(isLate),
+                        isDamaged: Boolean(isDamaged),
+                        photo
+                    },
+                });
+
+                return res.status(201).json({
+                    status: 201,
+                    message: "Reservation done and loan created successfully",
+                    data: loan,
+                });
+            } catch (error) {
+                return res.status(500).json({ message: "Internal server error", error: error.message });
+            }
+        } else {
+            res.status(200).json({
+                status: 200,
+                message: "Reservation canceled successfully",
+                data: reservation
+            });
+        }
+    } catch (e) {
+        res.status(500).json({
+            message: "Failed to edit reservation", error: e.message
+        });
+    }
+}
+
 export {
     getReservationsByUser,
-    createReservation
+    createReservation,
+    editReservation
 };
