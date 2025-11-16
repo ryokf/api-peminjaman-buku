@@ -1,46 +1,73 @@
-import {prisma} from "../prisma/client.js";
+import { getWriters as getWritersService, createWriter as createWriterService, editWriter as editWriterService, deleteWriter as deleteWriterService } from "../services/writer.services.js";
 
 const getWriters = async (req, res) => {
-    try{
-        const writers = await prisma.writer.findMany()
+    try {
+        const writers = await getWritersService();
 
-        res.status(200).json(writers);
-    }catch (e){
-        res.status(500).json({ error: e.message, message: "Failed to fetch writers" });
+        res.status(200).json({
+            status: 200,
+            message: "Writers fetched successfully",
+            data: writers
+        });
+    } catch (e) {
+        console.error("Get writers error:", e);
+        res.status(500).json({ 
+            error: e.message, 
+            message: "Failed to fetch writers" 
+        });
     }
 }
 
 const createWriter = async (req, res) => {
     try {
-        const newWriter = await prisma.writer.create({
-            data: req.body
+        const newWriter = await createWriterService(req.body);
+
+        res.status(201).json({
+            status: 201,
+            message: "Writer created successfully",
+            data: newWriter
         });
-        res.status(201).json(newWriter);
     } catch (e) {
-        res.status(500).json({ error: e.message, message: "Failed to create writer" });
+        console.error("Create writer error:", e);
+        res.status(500).json({ 
+            error: e.message, 
+            message: "Failed to create writer" 
+        });
     }
 }
 
 const editWriter = async (req, res) => {
     try {
-        const updatedWriter = await prisma.writer.update({
-            where: { id: req.params.id },
-            data: req.body
+        const updatedWriter = await editWriterService(req.params.id, req.body);
+
+        res.status(200).json({
+            status: 200,
+            message: "Writer updated successfully",
+            data: updatedWriter
         });
-        res.status(200).json(updatedWriter);
     } catch (e) {
-        res.status(500).json({ error: e.message, message: "Failed to edit writer" });
+        console.error("Edit writer error:", e);
+        res.status(500).json({ 
+            error: e.message, 
+            message: "Failed to edit writer" 
+        });
     }
 }
 
 const deleteWriter = async (req, res) => {
     try {
-        await prisma.writer.delete({
-            where: { id: req.params.id }
+        await deleteWriterService(req.params.id);
+
+        res.status(200).json({ 
+            status: 200,
+            message: "Writer deleted successfully" 
         });
-        res.status(200).json({ message: "Writer deleted successfully" });
     } catch (e) {
-        res.status(500).json({ error: e.message, message: "Failed to delete writer" });
+        console.error("Delete writer error:", e);
+        res.status(500).json({ 
+            error: e.message, 
+            message: "Failed to delete writer" 
+        });
     }
 }
 

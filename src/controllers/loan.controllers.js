@@ -1,50 +1,26 @@
-import { da } from "@faker-js/faker";
-import { prisma } from "../prisma/client.js";
-import setReturnDate from "../utils/setReturnDate.js";
+import { getLoansByUser as getLoansByUserService, createLoan as createLoanService, returnLoan as returnLoanService } from "../services/loan.services.js";
 
 const getLoansByUser = async (req, res) => {
-    const borrowerId = Number(req.params.userId);
-    const loans = await prisma.loan.findMany({
-        where: { borrowerId }
-    });
-    res.json(loans);
+    try {
+        const borrowerId = Number(req.params.userId);
+
+        const loans = await getLoansByUserService(borrowerId);
+
+        res.status(200).json({
+            status: 200,
+            message: "Loans fetched successfully",
+            data: loans
+        });
+    } catch (err) {
+        console.error("Get loans error:", err);
+        return res.status(500).json({
+            message: "Failed to fetch loans",
+            error: err.message,
+        });
+    }
 }
 
 const createLoan = async (req, res) => {
-    const book = await prisma.book.findUnique({
-        where: { id: Number(req.body.book_id) },
-        select: {
-            isAvailable: true
-        }
-    });
-
-    if (!book || !book.isAvailable) {
-        return res.status(400).json({
-            message: "Book is not available for loan"
-        });
-    }
-
-    const borrower = await prisma.user.findUnique({
-        where: { id: Number(req.body.borrower_id) },
-        select: {
-            isBlacklist: true
-        }
-    });
-
-    if (borrower.isBlacklist) {
-        return res.status(400).json({
-            message: "Your account is blacklisted and cannot borrow books, please contact the library staff"
-        });
-    }
-
-    // Opsional: Cek batas maksimum peminjaman
-    const activeLoans = await prisma.loan.count({
-        where: { borrowerId: borrower.id, isDone: false }
-    });
-    if (activeLoans >= 2) { // Asumsi batas 3 buku
-        return res.status(400).json({ message: "You have reached maximum borrow limit" });
-    }
-
     try {
         const {
             book_id,
@@ -55,31 +31,7 @@ const createLoan = async (req, res) => {
             photo
         } = req.body;
 
-        // Required fields
-        if (book_id === undefined || borrower_id === undefined) {
-            return res.status(400).json({
-                message: "book_id and borrower_id are required"
-            });
-        }
-
-        const borrowDate = new Date()
-        const [loan, _] = await prisma.$transaction([
-            prisma.loan.create({
-                data: {
-                    bookId: Number(book_id),
-                    borrowerId: Number(borrower_id),
-                    returnDate: new Date(setReturnDate(borrowDate)),
-                    isDone: Boolean(is_done),
-                    isLate: Boolean(is_late),
-                    isDamaged: Boolean(is_damaged),
-                    photo
-                },
-            }),
-            prisma.book.update({
-                where: { id: Number(book_id) },
-                data: { isAvailable: false }
-            })
-        ]);
+        const loan = await createLoanService(book_id, borrower_id, is_done, is_late, is_damaged, photo);
 
         return res.status(201).json({
             status: 201,
@@ -87,57 +39,36 @@ const createLoan = async (req, res) => {
             data: loan
         });
     } catch (error) {
-        return res.status(500).json({ message: "Internal server error", error: error.message });
+        console.error("Create loan error:", error);
+        if (error.message && (error.message.includes("not available") || error.message.includes("blacklisted") || error.message.includes("maximum"))) {
+            return res.status(400).json({ message: error.message });
+        }
+        return res.status(500).json({ 
+            message: "Internal server error", 
+            error: error.message 
+        });
     }
 }
 
-const returnBook = async (req, res) => {
+const returnLoan = async (req, res) => {
     try {
         const id = Number(req.params.id);
-        const { isDamaged } = req.body
+        const { isDamaged } = req.body;
 
-        const loanData = await prisma.loan.findUnique({
-            where: { id },
-            select: {
-                returnDate: true
-            }
-        });
-
-        let isLate= false
-        const currentDate = new Date();
-        if (currentDate > loanData.returnDate) {
-            isLate = true;
-        }
-
-        const [loan, _] = await prisma.$transaction([
-            prisma.loan.update({
-                where: { id },
-                data: {
-                    isDone: true,
-                    isDamaged,
-                    isLate
-                }
-            }),
-            prisma.book.updateMany({
-                where: {
-                    loans: {
-                        some: {
-                            id: id
-                        }
-                    }
-                },
-                data: {
-                    isAvailable: true
-                }
-            })
-        ]);
+        const loan = await returnLoanService(id, isDamaged);
 
         res.status(200).json({
             status: 200,
             message: "Book returned successfully",
             data: loan
-        })
+        });
     } catch (error) {
+        console.error("Return book error:", error);
+        if (error.message && error.message.includes("not found")) {
+            return res.status(404).json({
+                message: error.message
+            });
+        }
         res.status(500).json({
             status: 500,
             message: "Failed to return book",
@@ -146,4 +77,4 @@ const returnBook = async (req, res) => {
     }
 }
 
-export { getLoansByUser, createLoan, returnBook };
+export { getLoansByUser, createLoan, returnLoan };

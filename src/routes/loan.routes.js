@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { createLoan, getLoansByUser, returnBook } from "../controllers/loan.controllers.js";
+import { createLoan, getLoansByUser, returnLoan } from "../controllers/loan.controllers.js";
 
 const loanRouter = Router()
 
 loanRouter.get('/:userId', getLoansByUser)
 loanRouter.post('/', createLoan)
-loanRouter.put('/:id', returnBook)
+loanRouter.put('/:id', returnLoan)
 
 export default loanRouter

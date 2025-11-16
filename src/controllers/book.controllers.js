@@ -1,77 +1,69 @@
-import { prisma } from "../prisma/client.js";
+import { getBooks as getBooksService, getDetailBook as getDetailBookService, getBooksByWriter as getBooksByWriterService, createBook, editBook as editBookService, deleteBook as deleteBookService } from "../services/book.services.js";
 
 const getBooks = async (req, res) => {
-    let books;
+    try {
+        const categoryId = Number(req.query.category_id);
+        const searchQuery = req.query.search;
 
-    const categoryId = Number(req.query.category_id);
-    const searchQuery = req.query.search;
+        const books = await getBooksService(categoryId, searchQuery);
 
-    if (categoryId) {
-        books = await prisma.book.findMany({
-            where: { categoryId }
+        res.status(200).json({
+            status: 200,
+            message: "books fetched successfully",
+            data: books
         });
-    } else if (searchQuery) {
-        books = await prisma.book.findMany({
-            where: {
-                title: {
-                    contains: searchQuery,
-                    mode: "insensitive"
-                }
-            }
+    } catch (err) {
+        console.error("Get books error:", err);
+        return res.status(500).json({
+            message: "Failed to fetch books",
+            error: err.message,
         });
-    } else {
-        books = await prisma.book.findMany();
     }
-    res.status(200).json({
-        status: 200,
-        message: "books fetched successfully",
-        data: books
-    });
 }
 
 const getDetailBook = async (req, res) => {
-    const id = Number(req.params.id);
-    const book = await prisma.book.findUnique({
-        where: { id },
-        include: {
-            writer: true,
-            category: true,
-            loans: {
-                select:{
-                    isDone: true
-                }
-            },
-            reservations: {
-                where: {
-                    status: "queue"
-                }
-            }
-        }
-    });
+    try {
+        const id = Number(req.params.id);
 
-    let onBorrowed = false
-    book.loans.forEach((loan) => {
-        if (!loan.isDone) {
-            onBorrowed = true
-        }
-    });
+        const book = await getDetailBookService(id);
 
-    res.status(200).json({
-        status: 200,
-        message: "",
-        data: {
-            onBorrowed,
-            ...book
+        res.status(200).json({
+            status: 200,
+            message: "Book detail fetched successfully",
+            data: book
+        });
+    } catch (err) {
+        console.error("Get detail book error:", err);
+        if (err.message.includes("not found")) {
+            return res.status(404).json({
+                message: err.message
+            });
         }
-    });
+        return res.status(500).json({
+            message: "Failed to fetch book detail",
+            error: err.message,
+        });
+    }
 }
 
 const getBooksByWriter = async (req, res) => {
-    const writerId = Number(req.params.writerId);
-    const books = await prisma.book.findMany({
-        where: { writerId }
-    });
-    res.send(books);
+    try {
+        const writerId = Number(req.params.writerId);
+
+        const books = await getBooksByWriterService(writerId);
+
+        res.status(200).json({
+            status: 200,
+            message: "Books by writer fetched successfully",
+            data: books
+        });
+    } catch (err) {
+        console.error("Get books by writer error:", err);
+        return res.status(500).json({
+            message: "Failed to fetch books by writer",
+            error: err.message,
+        });
+    }
 }
 
 const createBooks = async (req, res) => {
@@ -87,37 +79,14 @@ const createBooks = async (req, res) => {
             owner_id,
         } = req.body;
 
-        // Basic required-field validation
-        if (!title || !language) {
-            return res.status(400).json({ message: "title and language are required" });
-        }
-        if (
-            writer_id === undefined ||
-            category_id === undefined ||
-            owner_id === undefined
-        ) {
-            return res.status(400).json({
-                message: "writer_id, category_id, and owner_id are required",
-            });
-        }
-
-        const newBook = await prisma.book.create({
-            data: {
-                title,
-                description,
-                language,
-                photo,
-                isAvailable: Boolean(is_available),
-                // Ensure numeric FK values
-                writerId: Number(writer_id),
-                categoryId: Number(category_id),
-                ownerId: Number(owner_id),
-            },
-        });
+        const newBook = await createBook(title, description, language, photo, is_available, writer_id, category_id, owner_id);
 
         return res.status(201).json(newBook);
     } catch (err) {
         console.error("Create book error:", err);
+        if (err.message && err.message.includes("required")) {
+            return res.status(400).json({ message: err.message });
+        }
         return res.status(500).json({
             message: "Failed to create book",
             error: err.message,
@@ -139,21 +108,13 @@ const editBook = async (req, res) => {
             owner_id,
         } = req.body;
 
-        const updatedBook = await prisma.book.update({
-            where: { id },
-            data: {
-                title,
-                description,
-                language,
-                photo,
-                isAvailable: is_available !== undefined ? Boolean(is_available) : undefined,
-                writerId: writer_id !== undefined ? Number(writer_id) : undefined,
-                categoryId: category_id !== undefined ? Number(category_id) : undefined,
-                ownerId: owner_id !== undefined ? Number(owner_id) : undefined,
-            },
-        });
+        const updatedBook = await editBookService(id, title, description, language, photo, is_available, writer_id, category_id, owner_id);
 
-        return res.status(200).json(updatedBook);
+        return res.status(200).json({
+            status: 200,
+            message: "Book updated successfully",
+            data: updatedBook
+        });
     } catch (err) {
         console.error("Edit book error:", err);
         return res.status(500).json({
@@ -167,50 +128,20 @@ const deleteBook = async (req, res) => {
     try {
         const id = Number(req.params.id);
 
-        // Pertama, periksa apakah buku ada
-        const book = await prisma.book.findUnique({
-            where: { id },
-            include: {
-                loans: true,
-                reservations: true
-            }
-        });
-
-        if (!book) {
-            return res.status(404).json({
-                message: `Book with id ${ id } not found`
-            });
-        }
-
-        // Gunakan transaksi untuk menghapus semua data terkait dan buku dalam satu operasi atomic
-        const deletedBook = await prisma.$transaction(async (tx) => {
-            // Hapus semua reservations terkait
-            if (book.reservations.length > 0) {
-                await tx.reservation.deleteMany({
-                    where: { bookId: id }
-                });
-            }
-
-            // Hapus semua loans terkait
-            if (book.loans.length > 0) {
-                await tx.loan.deleteMany({
-                    where: { bookId: id }
-                });
-            }
-
-            // Akhirnya hapus buku
-            return await tx.book.delete({
-                where: { id }
-            });
-        });
+        const deletedBook = await deleteBookService(id);
 
         return res.status(200).json({
             status: 200,
-            message: `Book with id ${ id } and all related records successfully deleted`,
+            message: `Book with id ${id} and all related records successfully deleted`,
             data: deletedBook
         });
     } catch (err) {
         console.error("Delete book error:", err);
+        if (err.message && err.message.includes("not found")) {
+            return res.status(404).json({
+                message: err.message
+            });
+        }
         return res.status(500).json({
             message: "Failed to delete book",
             error: err.message
