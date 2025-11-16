@@ -117,12 +117,7 @@ const returnLoan = async (id, isDamaged) => {
 
     if (nextInQueue) {
         await editReservation(nextInQueue?.id, "done");
-    } else {
-        await prisma.book.update({
-            where: { id: loan.bookId },
-            data: { isAvailable: true }
-        });
-    }
+    } 
 
     return {
         status: 201,

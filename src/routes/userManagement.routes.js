@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getAllUsersController, getUserByIdController, editUserController, toggleBlacklistController, deleteUserController, changeUserPasswordController } from "../controllers/user.controllers.js";
+import { getAllUsersController, getUserByIdController, editUserController, toggleBlacklistController, deleteUserController} from "../controllers/user.controllers.js";
 import checkRole from "../middleware/checkRole.middleware.js";
 
 const userManagementRouter = Router();
@@ -22,8 +22,7 @@ userManagementRouter.patch('/:id/blacklist', toggleBlacklistController);
 // Delete user
 userManagementRouter.delete('/:id', deleteUserController);
 
-// Change user password (staff changing other user's password)
-userManagementRouter.patch('/:id/password', changeUserPasswordController);
+
 
 export default userManagementRouter;
 

@@ -2,8 +2,7 @@ import { getLoansByUser as getLoansByUserService, createLoan as createLoanServic
 
 const getLoansByUser = async (req, res) => {
     try {
-        const borrowerId = Number(req.params.userId);
-
+        const borrowerId = Number(req.user.id);
         const loans = await getLoansByUserService(borrowerId);
 
         res.status(200).json({

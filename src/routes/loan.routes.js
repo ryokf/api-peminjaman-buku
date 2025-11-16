@@ -4,7 +4,7 @@ import checkRole from "../middleware/checkRole.middleware.js";
 
 const loanRouter = Router()
 
-loanRouter.get('/:userId', getLoansByUser)
+loanRouter.get('/', getLoansByUser)
 loanRouter.post('/', createLoan)
 loanRouter.put('/:id', checkRole(['staff']), returnLoan)
 

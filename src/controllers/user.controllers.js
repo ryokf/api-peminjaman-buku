@@ -1,4 +1,4 @@
-import { getAllUsers, getUserById, editUser, toggleBlacklist, deleteUser, changeUserPassword } from "../services/user.services.js";
+import { getAllUsers, getUserById, editUser, toggleBlacklist, deleteUser} from "../services/user.services.js";
 
 const getAllUsersController = async (req, res) => {
     try {
@@ -131,41 +131,5 @@ const deleteUserController = async (req, res) => {
     }
 }
 
-const changeUserPasswordController = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { current_password, new_password } = req.body;
 
-        if (!current_password || !new_password) {
-            return res.status(400).json({
-                message: "current_password and new_password are required"
-            });
-        }
-
-        const updatedUser = await changeUserPassword(id, current_password, new_password);
-
-        res.status(200).json({
-            status: 200,
-            message: "Password changed successfully",
-            data: updatedUser
-        });
-    } catch (error) {
-        console.error("Change password error:", error);
-        if (error.message.includes("not found")) {
-            return res.status(404).json({
-                message: error.message
-            });
-        }
-        if (error.message.includes("incorrect")) {
-            return res.status(401).json({
-                message: error.message
-            });
-        }
-        res.status(500).json({
-            message: "Failed to change password",
-            error: error.message
-        });
-    }
-}
-
-export { getAllUsersController, getUserByIdController, editUserController, toggleBlacklistController, deleteUserController, changeUserPasswordController };
+export { getAllUsersController, getUserByIdController, editUserController, toggleBlacklistController, deleteUserController };

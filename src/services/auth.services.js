@@ -90,4 +90,33 @@ const registerService = async (username, email, photo, password, status, is_blac
         };
 }
 
-export { loginService, registerService };
+const changeUserPassword = async (id, currentPassword, newPassword) => {
+    const user = await prisma.user.findUnique({
+        where: { id: Number(id) }
+    });
+
+    if (!user) {
+        throw new Error(`User with id ${id} not found`);
+    }
+
+    // Verify current password
+    const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!passwordMatch) {
+        throw new Error("Current password is incorrect");
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password in database
+    await prisma.user.update({
+        where: { id: Number(id) },
+        data: { password: hashedPassword }
+    });
+
+    return {
+        message: "Password changed successfully"
+    };
+}   
+
+export { loginService, registerService, changeUserPassword };
