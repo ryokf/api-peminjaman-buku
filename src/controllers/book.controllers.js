@@ -22,7 +22,11 @@ const getBooks = async (req, res) => {
     } else {
         books = await prisma.book.findMany();
     }
-    res.send(books);
+    res.status(200).json({
+        status: 200,
+        message: "books fetched successfully",
+        data: books
+    });
 }
 
 const getDetailBook = async (req, res) => {

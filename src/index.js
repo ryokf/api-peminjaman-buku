@@ -6,6 +6,7 @@ import loanRouter from './routes/loan.routes.js';
 import reservationsRouter from './routes/reservations.routes.js';
 import writerRouter from './routes/writer.routes.js';
 import categoryRouter from './routes/category.routes.js';
+import authorize from './middleware/auth.middleware.js';
 
 const app = express();
 
@@ -14,12 +15,15 @@ app.use(express.json());
 // Middleware untuk parsing URL-encoded bodies (seperti dari form)
 app.use(express.urlencoded({ extended: true }));
 
-app.use('/api/books', bookRouter);
+// Auth route - tanpa middleware authorize
 app.use('/api/auth', authRouter);
-app.use('/api/loans', loanRouter);
-app.use('/api/reservations', reservationsRouter);
-app.use('/api/writers', writerRouter);
-app.use('/api/categories', categoryRouter);
+
+// Semua route lainnya memerlukan authorization
+app.use('/api/books', authorize, bookRouter);
+app.use('/api/loans', authorize, loanRouter);
+app.use('/api/reservations', authorize, reservationsRouter);
+app.use('/api/writers', authorize, writerRouter);
+app.use('/api/categories', authorize, categoryRouter);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Book Borrowing API');
