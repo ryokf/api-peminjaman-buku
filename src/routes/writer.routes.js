@@ -1,11 +1,12 @@
 import express, { Router } from "express";
 import { createWriter, deleteWriter, editWriter, getWriters, } from "../controllers/writer.controllers.js";
+import checkRole from "../middleware/checkRole.middleware.js";
 
 const writerRouter = Router()
 
 writerRouter.get('/', getWriters)
-writerRouter.post('/', createWriter)
-writerRouter.put('/:id', editWriter)
-writerRouter.delete('/:id', deleteWriter)
+writerRouter.post('/', checkRole(['staff']), createWriter)
+writerRouter.put('/:id', checkRole(['staff']), editWriter)
+writerRouter.delete('/:id', checkRole(['staff']), deleteWriter)
 
 export default writerRouter;

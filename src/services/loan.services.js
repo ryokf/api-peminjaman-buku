@@ -87,14 +87,20 @@ const returnLoan = async (id, isDamaged) => {
         isLate = true;
     }
 
-    const loan = await prisma.loan.update({
-        where: { id },
-        data: {
-            isDone: true,
-            isDamaged: Boolean(isDamaged),
-            isLate
-        },
-    });
+    const [loan, _] = await prisma.$transaction([
+        prisma.loan.update({
+            where: { id },
+            data: {
+                isDone: true,
+                isDamaged: Boolean(isDamaged),
+                isLate
+            },
+        }),
+        prisma.book.update({
+            where: { id: loanData.bookId },
+            data: { isAvailable: true }
+        })
+    ]);
 
     const nextInQueue = await prisma.reservation.findFirst({
         where: {
@@ -109,9 +115,9 @@ const returnLoan = async (id, isDamaged) => {
         }
     });
 
-    if(nextInQueue){
+    if (nextInQueue) {
         await editReservation(nextInQueue?.id, "done");
-    }else{
+    } else {
         await prisma.book.update({
             where: { id: loan.bookId },
             data: { isAvailable: true }

@@ -6,6 +6,7 @@ import loanRouter from './routes/loan.routes.js';
 import reservationsRouter from './routes/reservations.routes.js';
 import writerRouter from './routes/writer.routes.js';
 import categoryRouter from './routes/category.routes.js';
+import userManagementRouter from './routes/userManagement.routes.js';
 import authorize from './middleware/auth.middleware.js';
 
 const app = express();
@@ -24,6 +25,9 @@ app.use('/api/loans', authorize, loanRouter);
 app.use('/api/reservations', authorize, reservationsRouter);
 app.use('/api/writers', authorize, writerRouter);
 app.use('/api/categories', authorize, categoryRouter);
+
+// User management - staff only
+app.use('/api/users', authorize, userManagementRouter);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Book Borrowing API');

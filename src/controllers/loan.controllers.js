@@ -24,14 +24,15 @@ const createLoan = async (req, res) => {
     try {
         const {
             book_id,
-            borrower_id,
             is_done = false,
             is_late = false,
             is_damaged = false,
             photo
         } = req.body;
 
-        const loan = await createLoanService(book_id, borrower_id, is_done, is_late, is_damaged, photo);
+        const user = req.user;
+
+        const loan = await createLoanService(book_id, user.id, is_done, is_late, is_damaged, photo);
 
         return res.status(201).json({
             status: 201,

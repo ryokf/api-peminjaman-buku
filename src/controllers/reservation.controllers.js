@@ -22,9 +22,10 @@ const getReservationsByUser = async (req, res) => {
 
 const createReservation = async (req, res) => {
     try {
-        const { book_id, borrower_id } = req.body;
+        const { book_id } = req.body;
+        const user = req.user;
 
-        const created = await createReservationService(book_id, borrower_id);
+        const created = await createReservationService(book_id, user.id);
 
         return res.status(201).json({
             status: 201,
