@@ -4,7 +4,15 @@ import { editReservation } from "./reservation.services.js";
 
 const getLoansByUser = async (borrowerId) => {
     const loans = await prisma.loan.findMany({
-        where: { borrowerId }
+        where: { borrowerId },
+        include: {
+            book: {
+                include: {
+                    writer: true,
+                    category: true
+                }
+            }
+        }
     });
 
     return loans;
