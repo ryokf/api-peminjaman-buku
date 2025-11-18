@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { PORT } from './config/env.js';
 import bookRouter from './routes/book.routes.js';
 import authRouter from './routes/auth.routes.js';
@@ -10,6 +11,9 @@ import userManagementRouter from './routes/userManagement.routes.js';
 import authorize from './middleware/auth.middleware.js';
 
 const app = express();
+
+// CORS middleware
+app.use(cors());
 
 // Middleware untuk parsing JSON body
 app.use(express.json());

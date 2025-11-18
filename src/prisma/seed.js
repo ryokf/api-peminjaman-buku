@@ -82,16 +82,9 @@ async function main() {
 
     // --- Create Categories with explicit ids ---
     const categoryData = [
-        { id: 1, category: 'Fiction', icon: '📚' },
-        { id: 2, category: 'Non-Fiction', icon: '📖' },
-        { id: 3, category: 'Science', icon: '🔬' },
-        { id: 4, category: 'Technology', icon: '💻' },
-        { id: 5, category: 'History', icon: '🏛️' },
-        { id: 6, category: 'Biography', icon: '👤' },
-        { id: 7, category: 'Children', icon: '🧸' },
-        { id: 8, category: 'Romance', icon: '💝' },
-        { id: 9, category: 'Mystery', icon: '🔍' },
-        { id: 10, category: 'Self-Help', icon: '🌟' }
+        { id: 1, category: 'Fiction', icon: '💝' },
+        { id: 3, category: 'Non-fiction', icon: '🏛️' },
+        { id: 2, category: 'Comic', icon: '📖' },
     ];
     await prisma.category.createMany({ data: categoryData });
     console.log('Created categories:', categoryData.length);

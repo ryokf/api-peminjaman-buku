@@ -2,18 +2,23 @@ import { prisma } from "../prisma/client.js";
 
 const getBooks = async (categoryId, searchQuery) => {
     let books;
+    console.log("categoryId:", categoryId, "searchQuery:", searchQuery);
 
     if (categoryId) {
         books = await prisma.book.findMany({
             where: { categoryId }
         });
-    } else if (searchQuery) {
+    } 
+    
+    if (searchQuery != "") {
         books = await prisma.book.findMany({
-            where: {
+            where:
+            {
                 title: {
                     contains: searchQuery,
-                    mode: "insensitive"
-                }
+                    // mode: "insensitive"
+                }, 
+                categoryId
             }
         });
     } else {
